@@ -8,25 +8,35 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
-import java.io.*;
+import java.io.File;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import static at.jku.dke.dwh.enronassignment.util.Utils.PARQUET_STRING;
 
 public class EmailReader {
 
+    public static final String ID_COL_NAME = "ID";
+    public static final String DATE_COL_NAME = "Date";
+    public static final String FROM_COL_NAME = "From";
+    public static final String RECIPIENTS_COL_NAME = "Recipients";
+    public static final String SUBJECT_COL_NAME = "Subject";
+    public static final String BODY_COL_NAME = "Body";
+
+    public static final String X_BCC_IDENTIFIER = "X-bcc:";
+    public static final String X_TO_IDENTIFIER = "X-To:";
+    public static final String X_CC_IDENTIFIER = "X-cc:";
 
     private static final Logger LOGGER = Logger.getLogger(EmailReader.class);
-    private static final String X_BCC_IDENTIFIER = "X-bcc:";
-    private static final String X_TO_IDENTIFIER = "X-To:";
-    private static final String X_CC_IDENTIFIER = "X-cc:";
 
     private final DateFormat emailDateFormat;
     private final SparkSession sparkSession;
     private final StructType structType;
-    private final List<Email> emailObjectList;
 
     public EmailReader() {
         // Creates a session on a local master
@@ -39,59 +49,66 @@ public class EmailReader {
         this.structType = DataTypes.createStructType(
                 new StructField[]{
                         DataTypes.createStructField(
-                                "ID",
+                                ID_COL_NAME,
                                 DataTypes.StringType,
                                 false
                         ),
                         DataTypes.createStructField(
-                                "Date",
+                                DATE_COL_NAME,
                                 DataTypes.TimestampType,
                                 false
                         ),
                         DataTypes.createStructField(
-                                "From",
+                                FROM_COL_NAME,
                                 DataTypes.StringType,
                                 false
                         ),
                         DataTypes.createStructField(
-                                "Recipients",
+                                RECIPIENTS_COL_NAME,
                                 DataTypes.createArrayType(DataTypes.StringType),
                                 false
                         ),
                         DataTypes.createStructField(
-                                "Subject",
+                                SUBJECT_COL_NAME,
                                 DataTypes.StringType,
                                 true
                         ),
                         DataTypes.createStructField(
-                                "Body",
+                                BODY_COL_NAME,
                                 DataTypes.StringType,
                                 true
                         )
                 }
         );
 
-        this.emailObjectList = new ArrayList<>();
-
         this.emailDateFormat = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z (z)", Locale.US);
         //                                                  Fri, 26 Oct 2001 07:45:49 -0700 (PDT)
     }
 
+    /***
+     * Searches inside a given filepath for files (expected in the Enron Email format), parses the files and returns
+     * the Data as a Dataset of Emails
+     * @param path the filepath in which the email-files are
+     * @return a Dataset of Emails containing the Data stored in the email-files
+     */
     public Dataset<Email> getEmailDataset(String path) {
         LOGGER.info("Checking for files in " + path);
 
         ArrayList<String> pathList = (ArrayList<String>) getPathsInDirectory(path);
         LOGGER.info("Found " + pathList.size() + " files in the directory");
 
+
+        ArrayList<Email> emailObjectList = new ArrayList<>();
+
         //parse the files
         for (String pathInList : pathList) {
             Email newEmail = getEmailObject(pathInList);
-            this.emailObjectList.add(newEmail);
+            emailObjectList.add(newEmail);
         }
 
         //create Datasets
         ArrayList<Row> rowList = new ArrayList<>();
-        for (Email email : this.emailObjectList) {
+        for (Email email : emailObjectList) {
             rowList.add(RowFactory.create(email.getId(), email.getDate(), email.getFrom(), email.getRecipients(), email.getSubject(), email.getBody()));
         }
 
@@ -151,7 +168,7 @@ public class EmailReader {
         ArrayList<String> mergedLines = mergeLines(rawDataLines);
 
         //remove tabs
-        mergedLines = Utils.removeTabs(mergedLines);
+        mergedLines = new ArrayList<>(Utils.removeTabs(mergedLines));
 
         //map the data to an Object
         return getEmailObjectOfData(mergedLines);
@@ -255,6 +272,31 @@ public class EmailReader {
             }
         }
         return validLines;
+    }
+
+    /***
+     * Reads Email data from a parquet file and maps it into a <code>Dataset&lt;Email&gt;</code>
+     * @param paths an Array of String containing paths to .parquet-files
+     * @return a <code>Dataset&lt;Email&gt;</code> containing the data that was stored inside all of the parquet files
+     */
+    public Dataset<Email> readFromParquetFiles(String[] paths) {
+        Dataset<Row> result;
+
+        //read in the files
+        result = this.sparkSession
+                .read()
+                .format(PARQUET_STRING)
+                .schema(this.structType)
+                .load(paths);
+
+        return Utils.convertToEmailDataset(result);
+    }
+
+    /***
+     * Stops the spark session
+     */
+    public void close() {
+        this.sparkSession.stop();
     }
 }
 
