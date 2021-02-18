@@ -1,0 +1,15 @@
+/src/main/java/at/jku/dke/dwh/enronassignment/temp/SimpleCSVApp.java
+/data/enron_mail_20150507.tar
+/data/enron_mail_20150507.tar.gz
+
+/.idea/sonarlint/
+/.idea/sonarlint/issuestore/
+/.idea/.gitignore
+/.idea/compiler.xml
+/.idea/encodings.xml
+/.idea/jarRepositories.xml
+/.idea/misc.xml
+/.idea/uiDesigner.xml
+/.idea/vcs.xml
+/.idea/workspace.xml
+/data/
