@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static at.jku.dke.dwh.enronassignment.util.Utils.PARQUET_STRING;
+import static at.jku.dke.dwh.enronassignment.util.Utils.PARQUET_FORMAT;
 
 public class EmailReader {
 
@@ -272,6 +272,7 @@ public class EmailReader {
         return new Email(id, date, from, recipients, subject, body.toString());
     }
 
+
     private List<String> mapRecipients(String cleanEmailList, String xMetaEmailList) {
 
         //if nothing no adresses are in there, return nothing
@@ -458,7 +459,7 @@ public class EmailReader {
         //read in the files
         result = this.sparkSession
                 .read()
-                .format(PARQUET_STRING)
+                .format(PARQUET_FORMAT)
                 .schema(this.structType)
                 .load(paths);
 
@@ -470,6 +471,10 @@ public class EmailReader {
      */
     public void close() {
         this.sparkSession.stop();
+    }
+
+    public SparkSession getSparkSession() {
+        return this.sparkSession;
     }
 }
 

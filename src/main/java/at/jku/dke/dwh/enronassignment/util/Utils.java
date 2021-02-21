@@ -16,7 +16,8 @@ import static at.jku.dke.dwh.enronassignment.preparation.EmailReader.*;
 
 public class Utils {
 
-    public static final String PARQUET_STRING = "parquet";
+    public static final String PARQUET_FORMAT = "parquet";
+    public static final String JSON_FORMAT = "json";
 
     private static final Logger LOGGER = Logger.getLogger(Utils.class);
     private static final String FILE_DATE_PREFIX_DATE_FORMAT = "yyyy-MM-dd_HH-mm-ss";
@@ -103,19 +104,20 @@ public class Utils {
      * Stores a Dataframe as parquet file in a sepcific path.
      * @param emailDataset the Dataframe that shall be stored into a parquet file
      * @param path the path as a String where the parquet file shall be saved, no File-Separator charactor at the end required!
+     * @param fileFormat the format in which the file shall be saved, use constants of this class: PARQUET_FORMAT, JSON_FORMAT
      */
-    public static void storeAsParquet(Dataset<Email> emailDataset, String path) {
+    public static void storeToFile(Dataset<Email> emailDataset, String path, String fileFormat) {
         //get current time
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern(FILE_DATE_PREFIX_DATE_FORMAT);
         LocalDateTime now = LocalDateTime.now();
 
         //build a unique filename
-        String parquetFilePath = path + File.separator + dtf.format(now) + "_output_parquet";
+        String parquetFilePath = path + File.separator + dtf.format(now) + "_output_" + fileFormat;
 
         //save it to path
         emailDataset
                 .write()
-                .format(PARQUET_STRING)
+                .format(fileFormat)
                 .save(parquetFilePath);
 
     }
