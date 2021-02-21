@@ -13,9 +13,9 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static at.jku.dke.dwh.enronassignment.util.Utils.PARQUET_STRING;
 
@@ -33,6 +33,7 @@ public class EmailReader {
     public static final String X_CC_IDENTIFIER = "X-cc:";
 
     private static final Logger LOGGER = Logger.getLogger(EmailReader.class);
+    private static final String REGEX_COMMA_INSIDE_QUOTES = "(,)(?=(?:[^\"]|\"[^\"]*\")*$)";
 
     private final DateFormat emailDateFormat;
     private final SparkSession sparkSession;
@@ -95,7 +96,7 @@ public class EmailReader {
         LOGGER.info("Checking for files in " + path);
 
         ArrayList<String> pathList = (ArrayList<String>) getPathsInDirectory(path);
-        LOGGER.info("Found " + pathList.size() + " files in the directory");
+        LOGGER.info("Found " + pathList.size() + " file(s) in the directory");
 
 
         ArrayList<Email> emailObjectList = new ArrayList<>();
@@ -187,31 +188,203 @@ public class EmailReader {
         String subject = null;
         StringBuilder body = new StringBuilder();
 
+        boolean foundIdFlag = false;
+        boolean foundDateFlag = false;
+        boolean foundFromFlag = false;
+        boolean foundSubjectFlag = false;
+        boolean foundToFlag = false;
+        boolean foundCcFlag = false;
+        boolean foundBccFlag = false;
+        boolean foundXtoFlag = false;
+        boolean foundXccFlag = false;
+        boolean foundXbccFlag = false;
+
+        String to = null;
+        String xTo = null;
+        String cc = null;
+        String xCc = null;
+        String bcc = null;
+        String xBcc = null;
+
         for (String line : dataLines) {
-            if (line.startsWith("Message-ID:")) {
+            if (line.startsWith("Message-ID:") && !foundIdFlag) {
+                foundIdFlag = true;
                 id = line.substring(line.indexOf(" ") + 1);
-            } else if (line.startsWith("Date:")) {
+            } else if (line.startsWith("Date:") && !foundDateFlag) {
+                foundDateFlag = true;
                 try {
                     date = new Timestamp(this.emailDateFormat.parse(line.substring(line.indexOf(" ") + 1)).getTime());
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
-            } else if (line.startsWith("From:")) {
+            } else if (line.startsWith("From:") && !foundFromFlag) {
+                foundFromFlag = true;
                 from = line.substring(line.indexOf(" ") + 1);
-            } else if (line.startsWith("Subject:")) {
+            } else if (line.startsWith("Subject:") && !foundSubjectFlag) {
+                foundSubjectFlag = true;
                 subject = line.substring(line.indexOf(" ") + 1);
-            } else if (line.startsWith("To:") || line.startsWith("Cc:") || line.startsWith("Bcc:") || line.startsWith(X_TO_IDENTIFIER) || line.startsWith(X_CC_IDENTIFIER) || line.startsWith(X_BCC_IDENTIFIER)) {
-                //all into the recipients
-                if (!line.substring(line.indexOf(" ") + 1).isEmpty()) {
-                    recipients.add(line.substring(line.indexOf(" ") + 1));
-                }
+            } else if (line.startsWith("To:") && !foundToFlag) {
+                foundToFlag = true;
+                to = line.substring(line.indexOf(" ") + 1);
+            } else if (line.startsWith("Cc:") && !foundCcFlag) {
+                foundCcFlag = true;
+                cc = line.substring(line.indexOf(" ") + 1);
+            } else if (line.startsWith("Bcc:") && !foundBccFlag) {
+                foundBccFlag = true;
+                bcc = line.substring(line.indexOf(" ") + 1);
+            } else if (line.startsWith(X_TO_IDENTIFIER) && !foundXtoFlag) {
+                foundXtoFlag = true;
+                xTo = line.substring(line.indexOf(" ") + 1);
+            } else if (line.startsWith(X_CC_IDENTIFIER) && !foundXccFlag) {
+                foundXccFlag = true;
+                xCc = line.substring(line.indexOf(" ") + 1);
+            } else if (line.startsWith(X_BCC_IDENTIFIER) && !foundXbccFlag) {
+                foundXbccFlag = true;
+                xBcc = line.substring(line.indexOf(" ") + 1);
             } else {
                 //body line
                 body.append(line);
             }
         }
 
+        //map the to, x-to, cc, x-cc, bcc and x-bcc
+        List<String> toRecipients = mapRecipients(to, xTo);
+        List<String> ccRecipients = mapRecipients(cc, xCc);
+        List<String> bccRecipients = mapRecipients(bcc, xBcc);
+
+        //add them to the recipients
+        if (toRecipients != null && !toRecipients.isEmpty()) {
+            recipients = toRecipients;
+        }
+
+        if (ccRecipients != null && !ccRecipients.isEmpty()) {
+            recipients = Stream.concat(recipients.stream(), ccRecipients.stream()).collect(Collectors.toList());
+        }
+
+        if (bccRecipients != null && !bccRecipients.isEmpty()) {
+            recipients = Stream.concat(recipients.stream(), bccRecipients.stream()).collect(Collectors.toList());
+        }
+
+        if (recipients.isEmpty()) {
+            LOGGER.error("Recipients are empty, something went wrong while parsing these fields");
+        }
+
         return new Email(id, date, from, recipients, subject, body.toString());
+    }
+
+    private List<String> mapRecipients(String cleanEmailList, String xMetaEmailList) {
+
+        //if nothing no adresses are in there, return nothing
+        if (cleanEmailList == null || cleanEmailList.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        //split list by comma
+        String[] addressesArray = cleanEmailList.split(", ");
+
+        //if no additional metadata, just return the email-addresses
+        if (xMetaEmailList == null || xMetaEmailList.isEmpty()) {
+            return Arrays.asList(addressesArray);
+        }
+
+
+        /*
+          The enron dataset has many different formats for the X-recipients fields:
+
+          Format #1
+          To: krumme@mdjlaw.com, mcash@ect.enron.com, szm@sonnenschein.com
+          X-To: "Robin Krumme \(E-mail\)" <krumme@mdjlaw.com>, "Michelle Cash \(E-mail\)" <mcash@ect.enron.com>, "Stacey Murphy \(E-mail\)" <szm@sonnenschein.com>
+
+          Format #2
+          To: hai.chen@enron.com, harry.arora@enron.com, jaime.gualy@enron.com, steve.wang@enron.com, robert.stalford@enron.com
+          X-To: Chen, Hai </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Hchen2>, Arora, Harry </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Harora>, Gualy, Jaime </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Jgualy>, Wang, Steve </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Swang3>, Stalford, Robert </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Rstalfor>
+
+          Format #3
+          To: scott.neal@enron.com, sandra.brawner@enron.com, kate.fraser@enron.com
+          X-To: Scott Neal, Sandra F Brawner, Kate Fraser
+
+          Format #4
+          Cc: jeff.skilling@enron.com, tskilling@tribune.com, ermak@gte.net
+          X-cc: Jeff Skilling, tskilling@tribune.com, ermak@gte.net
+
+          Format #5
+          When there is just one to/cc/bcc many different formats can be found in the corresponding X-field since there is only one recipient, all the Data inside the X field belongs to that one and no additionial mapping is required
+
+          Format #6
+          To: sschnitz@jcpenney.com, paulla@maritz.com
+          X-To: "Suzann Schnitzer" <sschnitz@jcpenney.com>, "Paul, Lisa" <paulla@maritz.com>
+
+          */
+
+        List<String> result = new ArrayList<>();
+
+        // #5 just one recipient, so concatenate the strings
+        if (addressesArray.length == 1) {
+            result.add(cleanEmailList + "; " + xMetaEmailList);
+            return result;
+        }
+
+        String[] xMetaInformationArray = xMetaEmailList.split(", ");
+
+        // #1, #3, #4 have all in common, that they're evenly separated by commas, independent from the content of the string and they are in correct order
+        if (addressesArray.length == xMetaInformationArray.length) {
+            //match each values
+            for (int i = 0; i < addressesArray.length; i++) {
+                result.add(addressesArray[i] + "; " + xMetaInformationArray[i]);
+            }
+            return result;
+        }
+
+        /* #2 the meta information has double the amount of commas
+
+           addressesArray:
+                [0] hai.chen@enron.com
+                [1] harry.arora@enron.com
+                [2] jaime.gualy@enron.com
+                [3] steve.wang@enron.com
+                [4] robert.stalford@enron.com
+
+           xMetaInformationArray:
+                [0] Chen
+                [1] Hai </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Hchen2>
+                [2] Arora
+                [3] Harry </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Harora>
+                [4] Gualy
+                [5] Jaime </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Jgualy>
+                [6] Wang
+                [7] Steve </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Swang3>
+                [8] Stalford
+                [9] Robert </O=ENRON/OU=NA/CN=RECIPIENTS/CN=Rstalfor>
+         */
+        if (addressesArray.length * 2 == xMetaInformationArray.length) {
+            for (int i = 0; i < addressesArray.length; i++) {
+                result.add(addressesArray[i] + "; " + xMetaInformationArray[i * 2] + " " + xMetaInformationArray[i * 2 + 1]);
+            }
+            return result;
+        }
+
+        // #6 regex matches all commas outside the double-quotes
+        String[] metaInfoFormatSix = {};
+        try {
+            metaInfoFormatSix = xMetaEmailList.split(REGEX_COMMA_INSIDE_QUOTES);
+        } catch (StackOverflowError e) {
+            LOGGER.error("Regex causes Stackoverflow, using just the emails without the metadata for better performance");
+        }
+        if (addressesArray.length == metaInfoFormatSix.length) {
+            for (int i = 0; i < addressesArray.length; i++) {
+                result.add(addressesArray[i] + "; " + metaInfoFormatSix[i]);
+            }
+            return result;
+        }
+
+        //else the pattern hasn't been defined yet, log an error and just use the to, cc, bcc recipients,
+        // so the correct number of addresses and recipients are found, but no matching with metadata
+        LOGGER.error("Undefined Recipients pattern: \n" +
+                "\t cleanEmailList = " + cleanEmailList +
+                "\t xMetaEmailList = " + xMetaEmailList);
+        LOGGER.info("using only the email addresses, no metadata");
+
+        return Arrays.asList(addressesArray);
     }
 
     /***

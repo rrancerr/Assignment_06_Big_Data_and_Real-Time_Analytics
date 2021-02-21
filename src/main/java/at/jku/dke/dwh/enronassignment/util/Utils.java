@@ -35,7 +35,21 @@ public class Utils {
             return;
         }
         for (String entry : arrayList) {
-            LOGGER.debug(entry);
+            LOGGER.info(entry);
+        }
+    }
+
+    /***
+     * Prints out all entries of an Array to the console
+     * @param stringArray the String array in which the entries shall get printed out
+     */
+    public static void printStringArray(String[] stringArray) {
+        if (stringArray.length == 0) {
+            LOGGER.error("Array is empty!");
+            return;
+        }
+        for (String entry : stringArray) {
+            LOGGER.info(entry);
         }
     }
 
