@@ -1,1 +1,1 @@
-java -cp bin\*;lib\* at.jku.dke.dwh.emailgenerator.Generator -i ./input -o ./output -f 10 -s 100
+java -cp bin\*;lib\* at.jku.dke.dwh.emailgenerator.Generator -i ./input -o C:\Users\Stadl\IdeaProjects\big_data_assignment\generator_output -f 10 -s 100

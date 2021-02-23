@@ -35,3 +35,18 @@ See `at.jku.dke.dwh.enronassignment.preparation.EmailReader.readFromParquetFiles
 #### d. Using Spark SQL, calculate the average number of recipients of an e-mail for each sender as well as the average length of an e-mail for each sender.
 #### e. Return the result as a JSON file with fields for the sender, avgNoOfRecpients, and avgLength. The JSON file should be written at a specified location.
 ### 2.3 Demonstrate your functions using example calls.
+
+## 3. E-Mail Generator
+### 3.1 Download the email-generator-1.1-bin.tar.gz package from Moodle and unpack it. The pro-gram periodically writes out a fixed number of e-mails into an output directory.
+See `email-generator-1.1.0`
+### 3.2 You may change the output directory, that is, the location where the e-mail generator stores the generated e-mails. The -o option of the program determines the output directory: Set it to wherever you would like your e-mails generated.
+See Changed the option to the `generator_output` directory in root.
+### 3.3 Run the start script to have e-mails copied into the output directory.
+Running the program with console
+
+## 4. Data Analysis with Spark Streaming
+### 4.1 Read from a text stream which uses the e-mail generator’s output directory as input.
+### 4.2 Use the Email class to represent the e-mails from the ingested input stream.
+### 4.3 Find the top-five senders of e-mails as measured by the total numbers of e-mails sent. Fur-thermore, find the top-five senders of e-mails as measured by the total number of words in all sent e-mails.
+### 4.4 Find the top-five most used words in the last minute using window operations.
+### 4.5 Append the outputs of your calculations to separate parquet files – one parquet file for the top-five senders overall, one parquet file for the top-five most used words in the last minute – at a specified location. Each entry in the parquet file should contain the time instant and time window, respectively, along with the requested information.
