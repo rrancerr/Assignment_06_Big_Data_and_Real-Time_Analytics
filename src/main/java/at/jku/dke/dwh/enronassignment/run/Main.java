@@ -17,8 +17,7 @@ public class Main {
         //TODO Java-doc schreiben
 
 
-        //Task 2.1
-        LOGGER.info("----------Task 2.1----------");
         Analyzer.task2point1();
+        Analyzer.task2point2();
     }
 }

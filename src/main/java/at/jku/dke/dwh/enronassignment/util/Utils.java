@@ -6,7 +6,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 
-import java.io.File;
+import java.io.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -17,7 +17,6 @@ import static at.jku.dke.dwh.enronassignment.preparation.EmailReader.*;
 public class Utils {
 
     public static final String PARQUET_FORMAT = "parquet";
-    public static final String JSON_FORMAT = "json";
 
     private static final Logger LOGGER = Logger.getLogger(Utils.class);
     private static final String FILE_DATE_PREFIX_DATE_FORMAT = "yyyy-MM-dd_HH-mm-ss";
@@ -100,25 +99,84 @@ public class Utils {
         return firstDf.unionAll(secDf);
     }
 
+
     /***
      * Stores a Dataframe as parquet file in a sepcific path.
      * @param emailDataset the Dataframe that shall be stored into a parquet file
      * @param path the path as a String where the parquet file shall be saved, no File-Separator charactor at the end required!
-     * @param fileFormat the format in which the file shall be saved, use constants of this class: PARQUET_FORMAT, JSON_FORMAT
      */
-    public static void storeToFile(Dataset<Email> emailDataset, String path, String fileFormat) {
+    public static void storeAsParquet(Dataset<Email> emailDataset, String path) {
         //get current time
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern(FILE_DATE_PREFIX_DATE_FORMAT);
         LocalDateTime now = LocalDateTime.now();
 
         //build a unique filename
-        String parquetFilePath = path + File.separator + dtf.format(now) + "_output_" + fileFormat;
+        String parquetFilePath = path + File.separator + dtf.format(now) + "_output_parquet";
 
         //save it to path
         emailDataset
                 .write()
-                .format(fileFormat)
+                .format(PARQUET_FORMAT)
                 .save(parquetFilePath);
+        LOGGER.info("stored parquet file in " + parquetFilePath);
+    }
 
+    public static void storeAsJson(Dataset<Row> emailDataset, String path) {
+        //get current time
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern(FILE_DATE_PREFIX_DATE_FORMAT);
+        LocalDateTime now = LocalDateTime.now();
+
+        //build filename
+        String jsonFilePath = path + File.separator + dtf.format(now) + "_output_json";
+
+        //save it to path
+        emailDataset
+                .repartition(1)
+                .write()
+                .json(jsonFilePath);
+
+        //format the json file
+        try {
+            formatJsonFile(jsonFilePath);
+        } catch (IOException e) {
+            LOGGER.error("unable to format JSON");
+        }
+
+        LOGGER.info("stored JSON-file in " + jsonFilePath);
+    }
+
+
+    private static void formatJsonFile(String folderPath) throws IOException {
+        File dir = new File(folderPath);
+        File[] files = dir.listFiles((dir1, name) -> name.endsWith(".json"));
+
+        if (files != null) {
+            for (File jsonFile : files) {
+                // input the file content to the StringBuffer "input"
+                StringBuilder inputBuffer;
+                try (BufferedReader file = new BufferedReader(new FileReader(jsonFile.getPath()))) {
+                    inputBuffer = new StringBuilder();
+                    String line;
+
+                    while ((line = file.readLine()) != null) {
+                        inputBuffer.append(line);
+                        inputBuffer.append('\n');
+                    }
+                }
+                String inputStr = inputBuffer.toString();
+
+                //add the commas
+                inputStr = inputStr.replace("{", ",{");
+                //add the array brackets
+                inputStr = "[" + inputStr + "]";
+                //remove comma in first line
+                inputStr = inputStr.replace("[,{", "[{");
+
+                // write the new string with the replaced line OVER the same file
+                try (FileOutputStream fileOut = new FileOutputStream(jsonFile.getPath())) {
+                    fileOut.write(inputStr.getBytes());
+                }
+            }
+        }
     }
 }
