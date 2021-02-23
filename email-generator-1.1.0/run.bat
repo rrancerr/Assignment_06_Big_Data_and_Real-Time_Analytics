@@ -1,0 +1,1 @@
+java -cp bin\*;lib\* at.jku.dke.dwh.emailgenerator.Generator -i ./input -o ./output -f 10 -s 100

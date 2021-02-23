@@ -18,3 +18,5 @@
 /output/*
 .idea/sonarlint/issuestore/index.pb
 
+/generator_output/
+/email-generator-1.1.0/output/
