@@ -16,8 +16,8 @@ public class Main {
 
         //TODO Java-doc schreiben
 
-
         Analyzer.task2point1();
         Analyzer.task2point2();
+        Analyzer.task4point1();
     }
 }

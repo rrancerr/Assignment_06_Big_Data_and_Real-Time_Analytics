@@ -6,6 +6,10 @@ import at.jku.dke.dwh.enronassignment.util.Utils;
 import org.apache.log4j.Logger;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.streaming.OutputMode;
+import org.apache.spark.sql.streaming.StreamingQueryException;
+
+import java.util.concurrent.TimeoutException;
 
 import static at.jku.dke.dwh.enronassignment.preparation.EmailReader.*;
 import static org.apache.spark.sql.functions.*;
@@ -18,11 +22,12 @@ public class Analyzer {
     private static final String RECIPIENTS_COUNT_COL_NAME = "RecipientsCount";
     private static final String AVG_RECIPIENTS_COUNT_COL_NAME = "avgNoOfRecipients";
 
+    private static final String EMAIL_GENERATOR_OUTPUT_DIRECTORY_PATH = "generator_output";
     private static final String TEMP_TABLE_NAME = "Temp_Table";
 
     private static final Logger LOGGER = Logger.getLogger(Analyzer.class);
 
-    private Analyzer() {
+    public Analyzer() {
         throw new IllegalStateException("Utility class");
     }
 
@@ -112,5 +117,30 @@ public class Analyzer {
 
         //e) Return the result as a JSON file with fields for the sender, avgNoOfRecpients, and avgLength. The JSON file should be written at a specified location.
         Utils.storeAsJson(averageWordCount, "output");
+
+        emailReader.close();
+    }
+
+    public static void task4point1() {
+        LOGGER.info("----------Task 4.1----------");
+
+        EmailReader emailReader = new EmailReader();
+
+        Dataset<Row> df = emailReader.getSparkSession()
+                .readStream()
+                .format("text")
+                .load(EMAIL_GENERATOR_OUTPUT_DIRECTORY_PATH);
+
+        try {
+            df.writeStream()
+                    .outputMode(OutputMode.Update())
+                    .format("console")
+                    .option("truncate", "true")
+                    .start().awaitTermination();
+        } catch (TimeoutException | StreamingQueryException e) {
+            e.printStackTrace();
+        }
+
+        emailReader.close();
     }
 }

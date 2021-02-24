@@ -9,6 +9,7 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.io.File;
+import java.io.Serializable;
 import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
@@ -19,7 +20,7 @@ import java.util.stream.Stream;
 
 import static at.jku.dke.dwh.enronassignment.util.Utils.PARQUET_FORMAT;
 
-public class EmailReader {
+public class EmailReader implements Serializable {
 
     public static final String ID_COL_NAME = "ID";
     public static final String DATE_COL_NAME = "Date";
@@ -37,7 +38,8 @@ public class EmailReader {
 
     private final DateFormat emailDateFormat;
     private final SparkSession sparkSession;
-    private final StructType structType;
+    private final StructType enronStructType;
+    private final StructType streamTaskStructType;
 
     public EmailReader() {
         // Creates a session on a local master
@@ -47,7 +49,7 @@ public class EmailReader {
                 .master("local")
                 .getOrCreate();
 
-        this.structType = DataTypes.createStructType(
+        this.enronStructType = DataTypes.createStructType(
                 new StructField[]{
                         DataTypes.createStructField(
                                 ID_COL_NAME,
@@ -71,6 +73,61 @@ public class EmailReader {
                         ),
                         DataTypes.createStructField(
                                 SUBJECT_COL_NAME,
+                                DataTypes.StringType,
+                                true
+                        ),
+                        DataTypes.createStructField(
+                                BODY_COL_NAME,
+                                DataTypes.StringType,
+                                true
+                        )
+                }
+        );
+
+        this.streamTaskStructType = DataTypes.createStructType(
+                new StructField[]{
+                        DataTypes.createStructField(
+                                ID_COL_NAME,
+                                DataTypes.StringType,
+                                false
+                        ),
+                        DataTypes.createStructField(
+                                DATE_COL_NAME,
+                                DataTypes.StringType,
+                                false
+                        ),
+                        DataTypes.createStructField(
+                                FROM_COL_NAME,
+                                DataTypes.StringType,
+                                false
+                        ),
+                        DataTypes.createStructField(
+                                RECIPIENTS_COL_NAME,
+                                DataTypes.StringType,
+                                false
+                        ),
+                        DataTypes.createStructField(
+                                SUBJECT_COL_NAME,
+                                DataTypes.StringType,
+                                true
+                        ),
+                        DataTypes.createStructField(
+                                "Mime-Version",
+                                DataTypes.StringType,
+                                true
+                        ),
+                        DataTypes.createStructField(
+                                "Content-Type",
+                                DataTypes.StringType,
+                                true
+                        ),
+                        DataTypes.createStructField(
+                                "Content-Transfer-Encoding",
+                                DataTypes.StringType,
+                                true
+                        ),
+                        DataTypes.createStructField(
+                                "empty-line",
                                 DataTypes.StringType,
                                 true
                         ),
@@ -114,7 +171,7 @@ public class EmailReader {
         }
 
         //Dataset<Row>
-        Dataset<Row> tempRow = this.sparkSession.createDataFrame(rowList, this.structType);
+        Dataset<Row> tempRow = this.sparkSession.createDataFrame(rowList, this.enronStructType);
 
         //Dataset<Email>
         Dataset<Email> result = tempRow.as(Encoders.bean(Email.class));
@@ -159,8 +216,12 @@ public class EmailReader {
             return null;
         }
 
+        return convertStringToEmail(unformattedText);
+    }
+
+    public Email convertStringToEmail(String stringEntry) {
         //create String-array entry for each line
-        String[] strArr = unformattedText.split(System.getProperty("line.separator"));
+        String[] strArr = stringEntry.split(System.getProperty("line.separator"));
 
         //get rid of unnecessary data
         ArrayList<String> rawDataLines = clearEntries(strArr);
@@ -460,7 +521,7 @@ public class EmailReader {
         result = this.sparkSession
                 .read()
                 .format(PARQUET_FORMAT)
-                .schema(this.structType)
+                .schema(this.enronStructType)
                 .load(paths);
 
         return Utils.convertToEmailDataset(result);
@@ -475,6 +536,14 @@ public class EmailReader {
 
     public SparkSession getSparkSession() {
         return this.sparkSession;
+    }
+
+    public StructType getEnronStructType() {
+        return enronStructType;
+    }
+
+    public StructType getStreamTaskStructType() {
+        return streamTaskStructType;
     }
 }
 
