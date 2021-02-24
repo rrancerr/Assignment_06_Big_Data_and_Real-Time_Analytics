@@ -121,6 +121,11 @@ public class Utils {
         LOGGER.info("stored parquet file in " + parquetFilePath);
     }
 
+    /***
+     * Stores a Dataset at a specific location as JSON file
+     * @param emailDataset the Dataset which should be saved
+     * @param path the directory path were the JSON file shall be created
+     */
     public static void storeAsJson(Dataset<Row> emailDataset, String path) {
         //get current time
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern(FILE_DATE_PREFIX_DATE_FORMAT);
@@ -146,6 +151,11 @@ public class Utils {
     }
 
 
+    /***
+     * Reformats all Json files inside a folder which were created by the at.jku.dke.dwh.enronassignment.util.Utils#storeAsJson(org.apache.spark.sql.Dataset, java.lang.String) function
+     * @param folderPath the directory path containing the JSON-files
+     * @throws IOException when the file can't be accessed or an Error during the formatting happens
+     */
     private static void formatJsonFile(String folderPath) throws IOException {
         File dir = new File(folderPath);
         File[] files = dir.listFiles((dir1, name) -> name.endsWith(".json"));

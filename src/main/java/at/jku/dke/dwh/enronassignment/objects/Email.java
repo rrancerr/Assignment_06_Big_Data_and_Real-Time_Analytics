@@ -4,6 +4,9 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.List;
 
+/***
+ * Object that holds the information of an email
+ */
 public class Email implements Serializable {
     private final String id;
     private final Timestamp date;

@@ -35,6 +35,9 @@ See `at.jku.dke.dwh.enronassignment.preparation.EmailReader.readFromParquetFiles
 #### d. Using Spark SQL, calculate the average number of recipients of an e-mail for each sender as well as the average length of an e-mail for each sender.
 #### e. Return the result as a JSON file with fields for the sender, avgNoOfRecpients, and avgLength. The JSON file should be written at a specified location.
 ### 2.3 Demonstrate your functions using example calls.
+See `at.jku.dke.dwh.enronassignment.run.Analyzer.task2point1`
+and
+`at.jku.dke.dwh.enronassignment.run.Analyzer.task2point2` 
 
 ## 3. E-Mail Generator
 ### 3.1 Download the email-generator-1.1-bin.tar.gz package from Moodle and unpack it. The pro-gram periodically writes out a fixed number of e-mails into an output directory.
@@ -46,6 +49,7 @@ Running the program with console
 
 ## 4. Data Analysis with Spark Streaming
 ### 4.1 Read from a text stream which uses the e-mail generator’s output directory as input.
+See `at.jku.dke.dwh.enronassignment.run.Analyzer.task4point1`
 ### 4.2 Use the Email class to represent the e-mails from the ingested input stream.
 ### 4.3 Find the top-five senders of e-mails as measured by the total numbers of e-mails sent. Fur-thermore, find the top-five senders of e-mails as measured by the total number of words in all sent e-mails.
 ### 4.4 Find the top-five most used words in the last minute using window operations.

@@ -14,6 +14,10 @@ import java.util.concurrent.TimeoutException;
 import static at.jku.dke.dwh.enronassignment.preparation.EmailReader.*;
 import static org.apache.spark.sql.functions.*;
 
+
+/***
+ * Static class for splitting up the tasks
+ */
 public class Analyzer {
 
     private static final String WORDS_COL_NAME = "Words";
@@ -27,10 +31,13 @@ public class Analyzer {
 
     private static final Logger LOGGER = Logger.getLogger(Analyzer.class);
 
-    public Analyzer() {
+    private Analyzer() {
         throw new IllegalStateException("Utility class");
     }
 
+    /***
+     * Demonstrates Task 2.1
+     */
     public static void task2point1() {
         LOGGER.info("----------Task 2.1----------");
 
@@ -73,7 +80,9 @@ public class Analyzer {
         emailReader.close();
     }
 
-
+    /***
+     * Demonstrates Task 2.2
+     */
     public static void task2point2() {
         LOGGER.info("----------Task 2.2----------");
 
@@ -121,6 +130,9 @@ public class Analyzer {
         emailReader.close();
     }
 
+    /***
+     * Demonstrates Task 4.1
+     */
     public static void task4point1() {
         LOGGER.info("----------Task 4.1----------");
 

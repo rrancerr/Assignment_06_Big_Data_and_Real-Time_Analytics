@@ -13,11 +13,9 @@ public class Main {
     private static final Logger LOGGER = Logger.getLogger(Main.class);
 
     public static void main(String[] args) {
-
-        //TODO Java-doc schreiben
-
+        LOGGER.info("Starting...");
         Analyzer.task2point1();
         Analyzer.task2point2();
-        Analyzer.task4point1();
+//        Analyzer.task4point1();
     }
 }

@@ -180,6 +180,11 @@ public class EmailReader implements Serializable {
         return result;
     }
 
+    /***
+     * returns a List of file-paths as Strings of a given directory-path
+     * @param path the path to a directory
+     * @return a List of Strings of files inside the directory
+     */
     private List<String> getPathsInDirectory(String path) {
 
         ArrayList<String> pathList = new ArrayList<>();
@@ -201,6 +206,11 @@ public class EmailReader implements Serializable {
     }
 
 
+    /***
+     * Reads an Enron email file and maps its content to an Email-Object
+     * @param path the filepath to an Enron email file
+     * @return An Email object with the content of the email
+     */
     private Email getEmailObject(String path) {
         LOGGER.info("Reading from this path: " + path);
 
@@ -219,6 +229,11 @@ public class EmailReader implements Serializable {
         return convertStringToEmail(unformattedText);
     }
 
+    /***
+     * Converts a String representation of an Enron Email file to an Email Object
+     * @param stringEntry the String representation of the Email
+     * @return an Email Object with the mapped content  of the String
+     */
     public Email convertStringToEmail(String stringEntry) {
         //create String-array entry for each line
         String[] strArr = stringEntry.split(System.getProperty("line.separator"));
@@ -334,6 +349,12 @@ public class EmailReader implements Serializable {
     }
 
 
+    /***
+     * Maps the an Email with its corresponding Metadata (e.g. To - X-To, Cc - X-Cc, etc.)
+     * @param cleanEmailList the To, Cc, Bcc field as String
+     * @param xMetaEmailList the X-To, X-Cc, X-Bcc field as String
+     * @return a List of Strings with the mapped fields separated by a semicolon
+     */
     private List<String> mapRecipients(String cleanEmailList, String xMetaEmailList) {
 
         //if nothing no adresses are in there, return nothing
