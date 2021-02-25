@@ -172,4 +172,21 @@ public class Analyzer {
         df.show();
         emailReader.close();
     }
+
+
+    /***
+     * Reads a bunch of parquet files and displays the Dataset as a demo
+     */
+    public static void readParquetDemo() {
+        EmailReader emailReader = new EmailReader();
+        Dataset<Email> df = emailReader.readFromParquetFiles(new String[]{
+                        "output/2021-02-21_19-29-10_output_parquet/part-00000-f27d8511-3c65-4004-a1de-4ecd02a024aa-c000.snappy.parquet",
+                        "output/2021-02-21_21-15-34_output_parquet/part-00000-f05b8094-d795-40dc-9f5b-1cfdc912d109-c000.snappy.parquet",
+                        "output/2021-02-21_23-57-00_output_parquet/part-00000-ce0eed3a-d6cf-4005-8cc0-86883fc7f759-c000.snappy.parquet",
+                        "output/2021-02-21_23-57-26_output_parquet/part-00000-b2322a1f-8de5-4b8a-8e9e-bf4ff21e5cda-c000.snappy.parquet"
+                }
+        );
+        df.show();
+        emailReader.close();
+    }
 }

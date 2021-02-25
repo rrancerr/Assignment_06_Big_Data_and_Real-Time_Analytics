@@ -15,7 +15,6 @@
 /.idea/vcs.xml
 /.idea/workspace.xml
 /data/
-/output/*
 .idea/sonarlint/issuestore/index.pb
 
 /generator_output/
