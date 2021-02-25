@@ -14,8 +14,10 @@ public class Main {
 
     public static void main(String[] args) {
         LOGGER.info("Starting...");
-        Analyzer.task2point1();
-        Analyzer.task2point2();
+
+        Analyzer.readEnronDemo();
+//        Analyzer.task2point1();
+//        Analyzer.task2point2();
 //        Analyzer.task4point1();
     }
 }

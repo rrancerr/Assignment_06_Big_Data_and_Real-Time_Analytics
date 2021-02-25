@@ -342,7 +342,7 @@ public class EmailReader implements Serializable {
         }
 
         if (recipients.isEmpty()) {
-            LOGGER.error("Recipients are empty, something went wrong while parsing these fields");
+            LOGGER.error("Recipients are empty, no To, Cc or Bcc field is given");
         }
 
         return new Email(id, date, from, recipients, subject, body.toString());
@@ -462,9 +462,6 @@ public class EmailReader implements Serializable {
 
         //else the pattern hasn't been defined yet, log an error and just use the to, cc, bcc recipients,
         // so the correct number of addresses and recipients are found, but no matching with metadata
-        LOGGER.error("Undefined Recipients pattern: \n" +
-                "\t cleanEmailList = " + cleanEmailList +
-                "\t xMetaEmailList = " + xMetaEmailList);
         LOGGER.info("using only the email addresses, no metadata");
 
         return Arrays.asList(addressesArray);

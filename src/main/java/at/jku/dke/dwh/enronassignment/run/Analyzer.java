@@ -155,4 +155,21 @@ public class Analyzer {
 
         emailReader.close();
     }
+
+    /***
+     * Reads a bunch of Emails and displays the Dataset as a demo
+     */
+    public static void readEnronDemo() {
+        EmailReader emailReader = new EmailReader();
+        Dataset<Email> df = Utils.convertToEmailDataset(emailReader.getEmailDataset("data/maildir/badeer-r/all_documents").select(
+                ID_COL_NAME,
+                DATE_COL_NAME,
+                FROM_COL_NAME,
+                RECIPIENTS_COL_NAME,
+                SUBJECT_COL_NAME
+        ));
+        df.printSchema();
+        df.show();
+        emailReader.close();
+    }
 }
